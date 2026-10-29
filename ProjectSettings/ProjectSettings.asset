@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!129 &1
+PlayerSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 27
+  companyName: Xelyphor
+  productName: One More Build
+  defaultScreenWidth: 1280
+  defaultScreenHeight: 720
+  defaultScreenWidthWeb: 1280
+  defaultScreenHeightWeb: 720
+  resizableWindow: 1
+  runInBackground: 0
+  fullscreenMode: 3
+  usePlayerLog: 1
+  colorSpace: 0
+  bundleVersion: 0.1.0
+  applicationIdentifier:
+    Standalone: com.xelyphor.onemorebuild
+  activeInputHandler: 0
+  scriptingBackend:
+    Standalone: 0
+  apiCompatibilityLevelPerPlatform:
+    Standalone: 6

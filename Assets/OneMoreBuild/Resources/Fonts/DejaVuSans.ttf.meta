@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 238788c84e515dc6953becf2487c40f8
+TrueTypeFontImporter:
+  externalObjects: {}
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontName: DejaVu Sans
+  fontNames:
+  - DejaVu Sans
+  fallbackFontReferences: []
+  useLegacyBoundsCalculation: 0
+  shouldRoundAdvanceValue: 1

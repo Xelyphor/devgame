@@ -1,0 +1,6 @@
+{
+  "name": "OneMoreBuild.Runtime",
+  "rootNamespace": "OneMoreBuild",
+  "references": [],
+  "autoReferenced": true
+}

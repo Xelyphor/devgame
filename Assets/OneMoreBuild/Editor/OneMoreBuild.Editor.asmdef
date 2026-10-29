@@ -1,0 +1,6 @@
+{
+  "name": "OneMoreBuild.Editor",
+  "references": ["OneMoreBuild.Runtime"],
+  "includePlatforms": ["Editor"],
+  "autoReferenced": true
+}
