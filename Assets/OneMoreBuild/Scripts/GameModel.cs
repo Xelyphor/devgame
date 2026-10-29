@@ -8,6 +8,7 @@ namespace OneMoreBuild
     {
         public string title;
         public int genre, theme, scope;
+        public int actionsUsed;
         public float progress, code, art, polish, bugs;
     }
     [Serializable] public class ReleaseData
@@ -97,6 +98,21 @@ namespace OneMoreBuild
             if (index < 0 || index >= 6 || State.upgrades[index] || State.money < Catalog.Upgrades[index].Price) return false;
             State.money -= Catalog.Upgrades[index].Price;
             State.upgrades[index] = true;
+            return true;
+        }
+        // Each production task may be used once per project. Old v1 saves default to zero.
+        public bool ProductionTask(int task)
+        {
+            ProjectData p = State.project;
+            if (p == null || State.resting || State.pendingEvent >= 0 || task < 0 || task > 2 || (p.actionsUsed & (1 << task)) != 0) return false;
+            int energy = task == 0 ? 8 : task == 1 ? 12 : 18;
+            int money = task == 1 ? 30 : 0;
+            if (State.energy < energy || State.money < money) return false;
+            State.energy -= energy; State.money -= money;
+            p.actionsUsed |= 1 << task;
+            if (task == 0) { p.bugs = Clamp(p.bugs - 5, 0, 100); p.polish = Clamp(p.polish + 3, 0, 100); }
+            if (task == 1) { p.art = Clamp(p.art + 5, 0, 100); p.polish = Clamp(p.polish + 7, 0, 100); }
+            if (task == 2) { p.progress = Clamp(p.progress + 10, 0, 100); p.code = Clamp(p.code + 4, 0, 100); p.bugs = Clamp(p.bugs + 2, 0, 100); }
             return true;
         }
         public bool Contract()
@@ -205,7 +221,7 @@ namespace OneMoreBuild
             if (s.upgrades == null || s.upgrades.Length != 6 || s.releases == null || s.releases.Count != s.released || s.released > 100000 || s.pendingEvent < -1 || s.pendingEvent >= 8 || s.lastEvent < -1 || s.lastEvent >= 8 || (int)s.focus < 0 || (int)s.focus > 2 || s.eventAt < 0 || s.contractAt < 0) return false;
             if (s.pendingEvent >= 0 && s.project == null) return false;
             ProjectData p = s.project;
-            if (p != null && (string.IsNullOrWhiteSpace(p.title) || p.title.Length > 32 || p.genre < 0 || p.genre > 2 || p.theme < 0 || p.theme > 3 || p.scope < 0 || p.scope > 1 || !Bounded(p.progress, 0, 100) || !Bounded(p.bugs, 0, 100) || !Bounded(p.code, 0, 100) || !Bounded(p.art, 0, 100) || !Bounded(p.polish, 0, 100))) return false;
+            if (p != null && (string.IsNullOrWhiteSpace(p.title) || p.title.Length > 32 || p.genre < 0 || p.genre > 2 || p.theme < 0 || p.theme > 3 || p.scope < 0 || p.scope > 1 || p.actionsUsed < 0 || p.actionsUsed > 7 || !Bounded(p.progress, 0, 100) || !Bounded(p.bugs, 0, 100) || !Bounded(p.code, 0, 100) || !Bounded(p.art, 0, 100) || !Bounded(p.polish, 0, 100))) return false;
             foreach (ReleaseData r in s.releases)
                 if (r == null || string.IsNullOrWhiteSpace(r.title) || r.review == null || !Bounded(r.rating, 1, 10) || r.age < 0 || r.age > 120 || r.totalRevenue < 0 || r.paidRevenue != (int)((long)r.totalRevenue * r.age / 120)) return false;
             return true;

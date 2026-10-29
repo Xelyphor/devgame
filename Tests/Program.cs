@@ -72,6 +72,31 @@ class Program
             Check(eventSim.ResolveEvent(false), "event right");
             Check(Simulation.IsValid(eventSim.State), "event state valid");
         }
+        var tasks = new Simulation(new GameState());
+        Check(!tasks.ProductionTask(0), "task needs project");
+        tasks.StartProject("Tasks", 0, 0, 0);
+        tasks.State.energy = 0;
+        Check(!tasks.ProductionTask(2) && tasks.State.project.actionsUsed == 0, "no free task without energy");
+        tasks.State.energy = 100;
+        tasks.State.resting = true;
+        Check(!tasks.ProductionTask(0), "cannot do task while resting");
+        tasks.State.resting = false;
+        tasks.State.pendingEvent = 1;
+        Check(!tasks.ProductionTask(0), "event blocks task");
+        tasks.ResolveEvent(false);
+        tasks.State.money = 0;
+        Check(!tasks.ProductionTask(1), "playtest needs money");
+        tasks.State.money = 100;
+        for (int task = 0; task < 3; task++)
+        {
+            Check(tasks.ProductionTask(task), "task executes");
+            int taskCash = tasks.State.money;
+            float taskEnergy = tasks.State.energy;
+            Check(!tasks.ProductionTask(task) && tasks.State.money == taskCash && tasks.State.energy == taskEnergy, "task cannot replay");
+        }
+        Check(tasks.State.project.bugs == 2 && tasks.State.project.progress == 10 && tasks.State.project.art == 10 && tasks.State.project.polish == 10, "task effects exact");
+        Check(Simulation.IsValid(tasks.State), "task state valid");
+        Check(!tasks.ProductionTask(3), "unknown task rejected");
         var low = new Simulation(new GameState { money = 0 });
         Check(low.Contract(), "recovery contract");
         Check(!low.Contract(), "contract cooldown");
@@ -120,6 +145,11 @@ class Program
             Check(store.Save(a.State, out msg), "save pending event");
             var pending = store.Load(out msg);
             Check(pending.pendingEvent == 3 && pending.project.title == "seed", "pending event roundtrip");
+            Check(store.Save(tasks.State, out msg), "save tasks");
+            var savedTasks = new Simulation(store.Load(out msg));
+            Check(savedTasks.State.project.actionsUsed == 7 && !savedTasks.ProductionTask(1), "used tasks persist across reload");
+            savedTasks.State.project.actionsUsed = 0;
+            Check(savedTasks.ProductionTask(1), "old saves allow unused tasks");
             var invalid = new GameState { energy = float.NaN };
             Check(!store.Save(invalid, out msg), "reject invalid state");
             invalid = new GameState(); invalid.pendingEvent = 0;

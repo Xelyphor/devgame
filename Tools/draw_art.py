@@ -105,3 +105,7 @@ for frame in range(4):
         rect((7,18,11,25),'#d9a58c');rect((29,17+frame,33,24+frame),'#d9a58c');rect((23,12,24,13),'ink')
     im.save(ROOT/('developer'+str(frame)+'.png'))
 print('Generated 11 original textures')
+
+# Office v2 replaces the legacy room; character frames remain shared.
+import runpy
+runpy.run_path(str(Path(__file__).with_name("redesign_office.py")))

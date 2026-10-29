@@ -19,7 +19,7 @@ for p in (ROOT/'Assets').rglob('*'):
     check(guid is not None,'Invalid GUID: '+str(meta));g=guid.group(1)
     check(g not in guids,'Duplicate GUID: '+str(meta));guids[g]=p
     if p.suffix=='.png':
-        im=Image.open(p);check(im.size in [(384,216),(40,48)],'Unexpected texture size')
+        im=Image.open(p);check(im.size in [(384,176),(40,48)],'Unexpected texture size')
         text=meta.read_text();check('filterMode: 0' in text and 'enableMipMap: 0' in text,'Pixel import settings')
 for name in ['room']+['upgrade'+str(i) for i in range(6)]+['developer'+str(i) for i in range(4)]:
     check((ROOT/'Assets/OneMoreBuild/Resources/Art'/str(name+'.png')).exists(),'Missing resource '+name)
