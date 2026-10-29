@@ -23,7 +23,8 @@ namespace OneMoreBuild
             error = null;
             try
             {
-                if (!Simulation.IsValid(state)) throw new InvalidDataException("Состояние игры не прошло проверку.");
+                Simulation.Migrate(state);
+            if (!Simulation.IsValid(state)) throw new InvalidDataException("Состояние игры не прошло проверку.");
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 string body = encode(state);
                 string temporary = path + ".tmp";
@@ -41,6 +42,7 @@ namespace OneMoreBuild
             string[] parts = text.Split(new[] { '\n' }, 3);
             if (parts.Length != 3 || parts[0] != Header || parts[1] != Hash(parts[2])) throw new InvalidDataException("Файл повреждён или имеет неизвестный формат.");
             GameState state = decode(parts[2]);
+            Simulation.Migrate(state);
             if (!Simulation.IsValid(state)) throw new InvalidDataException("Некорректные данные сохранения.");
             return state;
         }

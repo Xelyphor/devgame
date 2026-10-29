@@ -104,7 +104,7 @@ namespace OneMoreBuild
             Hotspot(135, 8, 45, 19, "ДОСКА · выпущенные игры", new Vector2(155, 43), "board");
             Hotspot(275, 135, 26, 24, "ДОСТАВКА · купить оборудование", new Vector2(268, 150), "shop");
             Frame(new Rect(82, 496, 265, 76), Paper);
-            Label(96, 505, 240, 24, walking ? "Идёт…" : S.resting ? "Отдыхает" : S.project == null ? "Ждёт задания" : "Разработчик · " + Catalog.Focus[(int)S.focus], body);
+            Label(96, 505, 240, 24, walking ? "Идёт…" : S.patchRemaining > 0 ? "Патч: " + S.patchRemaining + " ч." : S.contractRemaining > 0 ? "Заказ: " + S.contractRemaining + " ч." : S.arrears > 0 ? "Простой: долг " + S.arrears : S.resting ? "Отдыхает" : S.project == null ? "Ждёт задания" : "Разработчик · " + Catalog.Focus[(int)S.focus], body);
             Label(96, 540, 84, 22, "Силы " + (int)S.energy, small);
             Bar(187, 548, 140, S.energy / 100, S.energy < 20 ? pink : Hex("66906A"));
             if (hoverHint != "")
@@ -138,7 +138,7 @@ namespace OneMoreBuild
             }
             if (Button(828, 610, 200, 44, S.resting ? "За работу" : "Перерыв", !walking))
                 WalkTo(S.resting ? new Vector2(197, 121) : new Vector2(71, 142), S.resting ? "desk" : "break");
-            if (Button(1040, 610, 210, 44, "Релиз", S.project != null && S.project.progress >= 60 && !walking)) modal = "releaseConfirm";
+            if (Button(1040, 610, 210, 44, "Релиз", S.project != null && S.project.progress >= 60 && !walking && S.arrears == 0 && S.contractRemaining == 0 && S.patchRemaining == 0)) modal = "releaseConfirm";
             Label(32, 674, 930, 24, noticeUntil > Time.unscaledTime || noticeUntil == 0 ? notice : "Компьютер — задания   •   Диван — отдых   •   Телефон — подработка", small);
             Label(1010, 674, 230, 24, "Пробел: пауза", small);
         }
@@ -158,7 +158,7 @@ namespace OneMoreBuild
             {
                 bool used = (p.actionsUsed & (1 << i)) != 0;
                 bool affordable = S.energy >= (i == 0 ? 8 : i == 1 ? 12 : 18) && (i != 1 || S.money >= 30);
-                if (Button(292, 365 + i * 60, 456, 44, used ? "Выполнено" : tasks[i], !used && affordable))
+                if (Button(292, 365 + i * 60, 456, 44, used ? "Выполнено" : tasks[i], !used && affordable && S.arrears == 0 && S.contractRemaining == 0 && S.patchRemaining == 0))
                 {
                     if (i == 0) { debugMessage = ""; modal = "debug"; continue; }
                     if (sim.ProductionTask(i)) { modal = ""; Feedback(details[i]); Toast("Задание выполнено: " + details[i]); Save(false); }
@@ -195,19 +195,22 @@ namespace OneMoreBuild
         }
         void DrawPhone()
         {
-            ModalHeader("Заказчик на линии", "Небольшая задача для чужого проекта.");
-            Label(292, 245, 680, 100, "Исправить меню сохранения\nОплата: 35 монет · Затраты: 12 энергии", heading);
-            Label(292, 380, 680, 50, S.hour < S.contractAt ? "Новый заказ через " + (S.contractAt - S.hour) + " ч." : "Заказ доступен.");
-            if (Button(292, 470, 696, 56, "Взять заказ", S.hour >= S.contractAt && S.energy >= 12))
-            { if (sim.Contract()) { modal = ""; Feedback("+35 монет"); Toast("Заказ сдан. Следующий — через сутки."); Save(false); } }
+            ModalHeader("Заказы", "Во время подработки разработка своей игры приостановлена.");
+            Label(292, 235, 680, 100, S.contractRemaining > 0 ? "Заказ в работе\nОсталось " + S.contractRemaining + " ч." : "Исправить меню сохранения\nОплата: 90 монет · 48 часов · 20 энергии", heading);
+            Label(292, 370, 680, 75, "Оплата приходит после выполнения. Если есть долг, заказ сначала погасит его. Содержание студии продолжает оплачиваться.");
+            if (Button(292, 470, 696, 56, "Принять заказ", S.contractRemaining == 0 && S.patchRemaining == 0 && S.hour >= S.contractAt && S.energy >= 20))
+            { if (sim.Contract()) { modal = ""; Toast("Заказ принят. Оплата через 48 часов."); Save(false); } }
             CloseButton();
         }
         void DrawMenu()
         {
-            ModalHeader("Меню", "Игра сохраняется автоматически каждые 20 секунд.");
-            if (Button(292, 238, 696, 54, "Сохранить")) Save(true);
-            if (Button(292, 315, 696, 54, sound ? "Звук: включён" : "Звук: выключен")) sound = !sound;
-            if (Button(292, 392, 696, 54, "Как играть")) modal = "help";
+            ModalHeader("Студия", "Содержание: " + sim.DailyCost + " мон./день · Долг: " + S.arrears + " · Опыт: " + S.experience);
+            if (Button(292, 228, 336, 58, "Финансы")) modal = "finance";
+            if (Button(652, 228, 336, 58, "Рынок")) modal = "market";
+            if (Button(292, 313, 336, 58, "Исследования")) modal = "research";
+            if (Button(652, 313, 336, 58, "Как играть")) modal = "help";
+            if (Button(292, 398, 336, 58, "Сохранить")) Save(true);
+            if (Button(652, 398, 336, 58, sound ? "Звук: включён" : "Звук: выключен")) sound = !sound;
             CloseButton();
         }
     }

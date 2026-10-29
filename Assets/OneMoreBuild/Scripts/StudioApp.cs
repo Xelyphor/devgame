@@ -22,7 +22,6 @@ namespace OneMoreBuild
         AudioSource audioSource;
         AudioClip click;
         ReleaseData lastRelease;
-        string releaseReasons;
         Vector2 historyScroll;
         GameState S { get { return sim.State; } }
 
@@ -70,7 +69,11 @@ namespace OneMoreBuild
             UpdateOffice();
             celebrate = Mathf.Max(0, celebrate - Time.unscaledDeltaTime);
             autosave += Time.unscaledDeltaTime;
+            int salesBefore = S.lifetimeSales;
+            int contractBefore = S.lifetimeContracts;
             clock.Advance(Time.unscaledDeltaTime, speed, () => modal.Length > 0 || S.pendingEvent >= 0 || walking, sim.Tick);
+            if (S.lifetimeSales > salesBefore) Toast("Недельный отчёт: +" + (S.lifetimeSales - salesBefore) + " мон. после возвратов и комиссии. Подробности — в релизах.");
+            if (S.lifetimeContracts > contractBefore) Toast("Заказ сдан: +90 мон. Долг погашается в первую очередь.");
             if (autosave >= 20) { Save(false); autosave = 0; }
             if (sim.GoalReached && !S.goalShown && modal.Length == 0 && S.pendingEvent < 0)
             { S.goalShown = true; modal = "goal"; Save(false); }
@@ -163,6 +166,11 @@ namespace OneMoreBuild
                 case "break": DrawBreak(); break;
                 case "phone": DrawPhone(); break;
                 case "menu": DrawMenu(); break;
+                case "business": DrawBusiness(); break;
+                case "report": DrawReleaseReport(); break;
+                case "finance": DrawFinance(); break;
+                case "market": DrawMarket(); break;
+                case "research": DrawResearch(); break;
                 case "new": DrawNewProject(); break;
                 case "shop": DrawShop(); break;
                 case "releaseConfirm": DrawReleaseConfirm(); break;
@@ -176,7 +184,7 @@ namespace OneMoreBuild
                 case "help":
                     ModalHeader("Твоя первая студия", "Здесь нет дедлайна. Экспериментируй в своём темпе.");
                     Label(292, 218, 690, 330,
-                        "1. Создай игру: мини-проект стоит 90 монет, небольшой — 150.\n\n2. Меняй приоритеты: код, графика и полировка вместе дают лучший результат. Полировка также убирает ошибки.\n\n3. При энергии ниже 20% работа замедляется. Отдых бесплатный.\n\n4. Релиз доступен с 60% готовности. На 100% можно продолжить повышать качество. Продажи идут 120 игровых часов.\n\n5. Купи улучшения. Если не хватает денег, подработка приносит 35 монет раз в сутки за 12 энергии.\n\nОкна и события останавливают игровое время. 1 час = 1 секунда на скорости 1×.", body);
+                        "1. Выбери тему и жанр, затем платформу, аудиторию, цену и рекламу. В меню «Рынок» видны тренды и требования жанров.\n\n2. Код, графика и полировка важны в разных пропорциях. Ошибки и ранний релиз снижают оценку.\n\n3. Студия оплачивает содержание ежедневно. Остаток долга виден в «Финансах»; доход сначала гасит его.\n\n4. Продажи считаются раз в неделю, всего 6 недель. Магазин берёт 30%, покупатели могут вернуть сырую игру. Итог — в отчёте релиза.\n\n5. Телефон: заказ на 48 часов, 90 монет, 20 энергии. Пока выполняется заказ, свой проект стоит. Это способ погасить долг.\n\nПовторение идей снижает спрос; успешной игре можно сделать продолжение. Исследования тратят опыт и деньги. Окна останавливают время.", body);
                     CloseButton(); break;
             }
         }
@@ -193,9 +201,9 @@ namespace OneMoreBuild
             if (Button(292, 491, 340, 38, "Мини · 90 монет", true, scope == 0)) scope = 0;
             if (Button(648, 491, 340, 38, "Небольшая · 150 монет", true, scope == 1)) scope = 1;
             int cost = scope == 0 ? 90 : 150;
-            if (Button(292, 566, 510, 46, "Начать разработку · " + cost + " монет", S.money >= cost))
+            if (Button(292, 566, 510, 46, "Далее · платформа и бюджет", S.money >= cost))
             {
-                if (sim.StartProject(projectTitle, genre, theme, scope)) { modal = ""; GUI.FocusControl(null); Save(false); Toast("Проект начат. Задания — по нажатию на компьютер."); }
+                modal = "business";
             }
             if (Button(816, 566, 172, 46, "Позже")) { modal = ""; GUI.FocusControl(null); }
         }
@@ -207,7 +215,7 @@ namespace OneMoreBuild
                 float y = 210 + i * 57;
                 Label(292, y, 463, 24, Catalog.Upgrades[i].Name);
                 Label(292, y + 26, 463, 23, Catalog.Upgrades[i].Description, small);
-                if (Button(780, y + 3, 208, 40, S.upgrades[i] ? "Установлено" : Catalog.Upgrades[i].Price + " монет", !S.upgrades[i] && S.money >= Catalog.Upgrades[i].Price))
+                if (Button(780, y + 3, 208, 40, S.upgrades[i] ? "Установлено" : Catalog.Upgrades[i].Price + " монет", !S.upgrades[i] && S.money >= Catalog.Upgrades[i].Price && S.arrears == 0))
                     if (sim.BuyUpgrade(i)) { Save(false); Toast("Комната стала лучше: " + Catalog.Upgrades[i].Name); }
             }
             CloseButton();
@@ -218,38 +226,14 @@ namespace OneMoreBuild
             if (p == null) { modal = ""; return; }
             ModalHeader("Пора показать игру миру?", p.title);
             Label(292, 227, 680, 185, "Готовность: " + (int)p.progress + "%\nКод: " + (int)p.code + " · Графика: " + (int)p.art + " · Полировка: " + (int)p.polish + "\nОшибок: " + Mathf.CeilToInt(p.bugs) + "\nСочетание темы и жанра: " + (Catalog.Fit(p.genre, p.theme) >= 1.2f ? "отличное" : Catalog.Fit(p.genre, p.theme) > 1 ? "удачное" : "обычное") + "\nОжидаемая оценка: " + sim.Rating(p).ToString("F1") + " / 10", heading);
-            Label(292, 450, 680, 65, "Полировка перед релизом повышает качество и уменьшает ошибки. Дальнейшие продажи будут поступать в течение пяти игровых дней.", body);
-            if (Button(292, 568, 340, 44, "Выпустить"))
+            Label(292, 450, 680, 65, "Бюджет: " + p.cost + " мон. Цена: " + Market.Prices[p.priceIndex] + ". Комиссия магазина 30%. Продажи — 6 недель. Первый отчёт через 7 дней.", body);
+            if (Button(292, 568, 340, 44, "Выпустить", S.arrears == 0 && S.contractRemaining == 0 && S.patchRemaining == 0))
             {
-                releaseReasons = "Код " + (int)p.code + " · Графика " + (int)p.art + " · Полировка " + (int)p.polish + "\nОшибки: −" + (p.bugs * .11f).ToString("F1") + " к оценке. Незавершённость: −" + ((100-p.progress) * .04f).ToString("F1") + ".";
+
                 lastRelease = sim.Release();
-                if (lastRelease != null) { modal = "result"; celebrate = 6; Save(false); }
+                if (lastRelease != null) { selectedRelease = S.releases.Count - 1; reportTab = 0; modal = "result"; celebrate = 6; Save(false); }
             }
             if (Button(648, 568, 340, 44, "Ещё немного поработать")) modal = "";
-        }
-        void DrawResult()
-        {
-            if (lastRelease == null) { modal = ""; return; }
-            ModalHeader("Игра выпущена", lastRelease.title);
-            Label(292, 220, 670, 66, lastRelease.rating.ToString("F1") + " / 10", title);
-            Label(292, 302, 670, 60, lastRelease.review, heading);
-            Label(292, 389, 670, 74, releaseReasons, body);
-            Label(292, 485, 670, 60, "Прогноз продаж: " + lastRelease.totalRevenue + " монет за 5 дней.\nМожно отдыхать или сразу придумать следующий проект.", small);
-            CloseButton("Продолжить");
-        }
-        void DrawHistory()
-        {
-            ModalHeader("Выпущенные игры", "Деньги от выпущенных игр поступают автоматически, пока идёт время.");
-            historyScroll = GUI.BeginScrollView(new Rect(292, 210, 696, 338), historyScroll, new Rect(0, 0, 670, Math.Max(330, S.releases.Count * 86)));
-            if (S.releases.Count == 0) Label(0, 20, 650, 80, "Пока нет выпущенных игр.", heading);
-            for (int row = 0; row < S.releases.Count; row++)
-            {
-                ReleaseData r = S.releases[S.releases.Count - 1 - row];
-                Label(0, row * 86, 560, 30, r.title, heading);
-                Label(580, row * 86, 80, 30, r.rating.ToString("F1"), heading);
-                Label(0, row * 86 + 39, 650, 35, "Получено " + r.paidRevenue + " / " + r.totalRevenue + " монет · " + (r.age == 120 ? "Продажи завершены" : "Продажи идут"), small);
-            }
-            GUI.EndScrollView(); CloseButton();
         }
         void DrawEvent()
         {
@@ -257,7 +241,7 @@ namespace OneMoreBuild
             ModalHeader("Событие", "СОБЫТИЕ · время остановлено");
             Label(292, 225, 690, 66, e.Title, title);
             Label(292, 318, 690, 100, e.Body, heading);
-            bool canPay = S.pendingEvent != 5 || S.money >= 25;
+            bool canPay = S.pendingEvent != 5 || (S.money >= 25 && S.arrears == 0);
             if (Button(292, 456, 696, 66, e.Left, canPay)) { if (sim.ResolveEvent(true)) Save(false); }
             // The first choice may have cleared pendingEvent during this GUI event.
             if (Button(292, 540, 696, 66, e.Right)) { if (sim.ResolveEvent(false)) Save(false); }
